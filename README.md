@@ -17,8 +17,6 @@
 
 ## Usage
 
-Please check the [known issues](#issues) before your start.
-
 1. Import the PasswordStateDecryptor module.
     - `Import-Module .\PasswordStateDecryptor.ps1`
 2. Point the script towards the web.config file.
