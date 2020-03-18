@@ -1,6 +1,6 @@
 <p align="center">
 <h1>Passwordstate decryptor</h1>
-    <b>Passwordstate decryptor is a PowerShell script for decrypting <a href="https://www.clickstudios.com.au/">Passwordstate</a> entries.</a>.</b>
+    <b>Passwordstate decryptor is a PowerShell script for decrypting <a href="https://www.clickstudios.com.au/">Passwordstate</a> entries</a>.</b>
     <br/>
     <a href="#usage">Usage</a>
     •
