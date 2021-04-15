@@ -15,6 +15,10 @@
 </p>
 <hr>
 
+# Info
+
+This script will decrypt PasswordState entries for PasswordState versions before Passwordstate 8..9 - Build 8903 (released April 6th 2020). During that update Clickstudios changed the way data was encrypted/decrypted. 
+
 ## Usage
 
 1. Import the PasswordStateDecryptor module.
