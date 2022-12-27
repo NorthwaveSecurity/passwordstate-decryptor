@@ -169,3 +169,6 @@ Alternatively, you can export all necessary secrets and run from another host, a
 Please use PowerShell's Get-Help to find even more information on how to use this script!
 
 The script can be found on [Northwave's GitHub](https://github.com/NorthwaveNL/passwordstate-decryptor).
+
+## Builds > 8903
+During update Passwordstate 8.9 - Build 8903 (released April 6th 2020) Clickstudios changed the way data was encrypted/decrypted. For newer versions, the folks at [modzero discovered](https://modzero.com/modlog/archives/2022/12/19/better_make_sure_your_password_manager_is_secure/index.html) that during the update, Clickstudios decided to reverse the encryption key.
