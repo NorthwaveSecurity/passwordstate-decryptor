@@ -49,6 +49,10 @@ function Invoke-PasswordStateDecryptor {
     # use FIPSMode? Default is false.
     $FIPSMode = $false,
 
+    [boolean]
+    # reverse encryption key? Default is false.
+    $Reverse = $false,
+
     [string]
     # The connection string to the database. Default extracts from web.config.
     $ConnectionString,
@@ -140,6 +144,10 @@ function Invoke-PasswordStateDecryptor {
             
             # Combine secrets and return recovered Text String
             $EncryptionKey = [Moserware.Security.Cryptography.SecretCombiner]::Combine($Secret1 + "`n" + $Secret3).RecoveredTextString
+            # For versions >= 8903 the key needs to be reverse
+            if ($Reverse) {
+                $EncryptionKey = $EncryptionKey[-1..-$EncryptionKey.Length ] -join ""
+            }
             Write-Host -ForegroundColor Green "Recovered Encryption Key: $EncryptionKey!"
         }
 

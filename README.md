@@ -17,7 +17,7 @@
 
 # Info
 
-This script will decrypt PasswordState entries for PasswordState versions before Passwordstate 8.9 - Build 8903 (released April 6th 2020). During that update Clickstudios changed the way data was encrypted/decrypted. For newer versions, please refer to https://github.com/NorthwaveSecurity/passwordstate-decryptor/issues/1#issuecomment-1361475213. The folks at modzero discovered that during the update, Clickstudios decided to reverse the encryption key. In their Security Disclosure Report they provide a sample patch for this script to make it work for newer versions. PRs to implement this feature are welcome!
+This script will decrypt PasswordState entries. During update Passwordstate 8.9 - Build 8903 (released April 6th 2020) Clickstudios changed the way data was encrypted/decrypted. For newer versions, the folks at [modzero discovered](https://modzero.com/modlog/archives/2022/12/19/better_make_sure_your_password_manager_is_secure/index.html) that during the update, Clickstudios decided to reverse the encryption key. The script now includes the option to reverse the encryption key before usage.
 
 ## Usage
 
@@ -46,8 +46,7 @@ SYNOPSIS
 
 
 SYNTAX
-    Invoke-PasswordStateDecryptor [[-WebConfig] <String>] [[-SecretSplitterDLL] <String>] [[-FIPSMode] <Boolean>]
-    [[-ConnectionString] <String>] [[-Secret1] <String>] [[-Secret3] <String>] [[-CSVPath] <String>] [[-EncryptionKey]
+    Invoke-PasswordStateDecryptor [[-WebConfig] <String>] [[-SecretSplitterDLL] <String>] [[-FIPSMode] <Boolean>] [[-Reverse] <Boolean>] [[-ConnectionString] <String>] [[-Secret1] <String>] [[-Secret3] <String>] [[-CSVPath] <String>] [[-EncryptionKey]
     <String>] [<CommonParameters>]
 
 
