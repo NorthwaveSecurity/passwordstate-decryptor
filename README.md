@@ -17,7 +17,7 @@
 
 # Info
 
-This script will decrypt PasswordState entries. During update Passwordstate 8.9 - Build 8903 (released April 6th 2020) Clickstudios changed the way data was encrypted/decrypted. For newer versions, the folks at [modzero discovered](https://modzero.com/modlog/archives/2022/12/19/better_make_sure_your_password_manager_is_secure/index.html) that during the update, Clickstudios decided to reverse the encryption key. The script now includes the option to reverse the encryption key before usage.
+This script will decrypt PasswordState entries. During update Passwordstate 8.9 - Build 8903 (released April 6th 2020) Clickstudios changed the way encryption keys were derived. The folks at [modzero discovered](https://modzero.com/modlog/archives/2022/12/19/better_make_sure_your_password_manager_is_secure/index.html) that during the update, Clickstudios decided to reverse the encryption key. In update Passwordstate 9.7 - Build 9700 (released 7th February 2023) Clickstudios again changed the way encryption keys were derived. The folks at [Division 5 discovered](https://division5.io/decrypting-passwordstate) that encryption keys were derived via HMAC-SHA256. This script now includes a build number flag, which will use the correct key derivation algorithm depending on the build number.
 
 ## Usage
 
@@ -46,8 +46,9 @@ SYNOPSIS
 
 
 SYNTAX
-    Invoke-PasswordStateDecryptor [[-WebConfig] <String>] [[-SecretSplitterDLL] <String>] [[-FIPSMode] <Boolean>] [[-Reverse] <Boolean>] [[-ConnectionString] <String>] [[-Secret1] <String>] [[-Secret3] <String>] [[-CSVPath] <String>] [[-EncryptionKey]
-    <String>] [<CommonParameters>]
+    Invoke-PasswordStateDecryptor [[-WebConfig] <String>] [[-SecretSplitterDLL] <String>] [[-FIPSMode] <Boolean>]
+    [[-ConnectionString] <String>] [[-Secret1] <String>] [[-Secret2] <String>] [[-Secret3] <String>] [[-Secret4] <String>]
+    [[-CSVPath] <String>] [[-EncryptionKey] <String>] [[-BuildNo] <Int32>] [<CommonParameters>]
 
 
 DESCRIPTION
@@ -60,8 +61,8 @@ DESCRIPTION
         * Moserware.SecretSplitter.dll somewhere (shipped in the repo or on the disk)
     An example of such a host is the PasswordState server itself.
 
-    Alternatively, if you are able to compromise the database, export all entries to CSV
-    and the secret1 and secret3 or the encryption key, you can use the script offline. The
+    Alternatively, if you are able to compromise the database, export all entries to CSV, the build number
+    and the secret1, secret2, secret3 and secret4 values or the encryption key, you can use the script offline. The
     CSV should contain (at least) the following fields: UserName, Password, Description and Title
 
 
