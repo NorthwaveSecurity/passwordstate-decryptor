@@ -170,5 +170,16 @@ Please use PowerShell's Get-Help to find even more information on how to use thi
 
 The script can be found on [Northwave's GitHub](https://github.com/NorthwaveNL/passwordstate-decryptor).
 
-## Builds > 8903
+## Builds >= 8903 and < 9700
 During update Passwordstate 8.9 - Build 8903 (released April 6th 2020) Clickstudios changed the way data was encrypted/decrypted. For newer versions, the folks at [modzero discovered](https://modzero.com/modlog/archives/2022/12/19/better_make_sure_your_password_manager_is_secure/index.html) that during the update, Clickstudios decided to reverse the encryption key.
+
+## Builds >= 9700
+In update Passwordstate 9.7 - Build 9700 (released 7th February 2023) Clickstudios again changed the way encryption keys were derived. The folks at [Division 5 discovered](https://division5.io/decrypting-passwordstate) that encryption keys were derived via HMAC-SHA256, thus using all four secret parts.
+
+The following table best summarises the encryption methods:
+
+| Versions | Encryption Key Derivation Method |
+| --- | --- |
+| x < 8903  | `join(Secret1, Secret3)` |
+| 8903 <= x < 9700 | `reverse(join(Secret1, Secret3))` |
+| 9700 <= x | `HMAC(alg=SHA256, key=join(Secret2, Secret4), plaintext=join(Secret1, Secret3))` |
